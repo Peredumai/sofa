@@ -71,10 +71,10 @@ function Thumb({ src, active, onClick }: { src: string; active: boolean; onClick
 
 function App() {
   const [index, setIndex] = useState(0)
-  const [name, setName] = useState('')
-  const [phone, setPhone] = useState('')
-  const [comment, setComment] = useState('')
-  const [sent, setSent] = useState(false)
+  // const [name, setName] = useState('')
+  // const [phone, setPhone] = useState('')
+  // const [comment, setComment] = useState('')
+  // const [sent, setSent] = useState(false)
 
   const total = GALLERY_IMAGES.length
   const currentSrc = GALLERY_IMAGES[index] ?? PLACEHOLDER
@@ -87,14 +87,14 @@ function App() {
     setIndex((i) => (i + 1) % total)
   }, [total])
 
-  function handleSubmit(e: React.FormEvent) {
-    e.preventDefault()
-    const body = encodeURIComponent(
-      `Замовлення диван M31\nІм'я: ${name}\nТелефон: ${phone}\nКоментар: ${comment || '—'}`,
-    )
-    window.open(`https://t.me/share/url?url=&text=${body}`, '_blank', 'noopener,noreferrer')
-    setSent(true)
-  }
+  // function handleSubmit(e: React.FormEvent) {
+  //   e.preventDefault()
+  //   const body = encodeURIComponent(
+  //     `Замовлення диван M31\nІм'я: ${name}\nТелефон: ${phone}\nКоментар: ${comment || '—'}`,
+  //   )
+  //   window.open(`https://t.me/share/url?url=&text=${body}`, '_blank', 'noopener,noreferrer')
+  //   setSent(true)
+  // }
 
   return (
     <div className="landing">
