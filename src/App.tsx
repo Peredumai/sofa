@@ -24,7 +24,7 @@ const FEATURES = [
 ] as const
 
 /** Замініть на ваш номер для кнопки «Зателефонувати» */
-const PHONE_DISPLAY = '+38 (0XX) XXX-XX-XX'
+const PHONE_DISPLAY = '+38 (099) 103-66-66'
 const PHONE_TEL = '+380XXXXXXXXX'
 
 function GalleryImage({ src, alt }: { src: string; alt: string }) {
