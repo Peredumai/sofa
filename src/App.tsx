@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import './App.css'
 
 /** Додайте файли sofa-1.jpg, sofa-2.jpg … у public/images/ */
@@ -27,7 +27,15 @@ const FEATURES = [
 const PHONE_DISPLAY = '+38 (099) 103-66-66'
 const PHONE_TEL = '+380XXXXXXXXX'
 
-function GalleryImage({ src, alt }: { src: string; alt: string }) {
+function GalleryImage({
+  src,
+  alt,
+  className = 'gallery-main',
+}: {
+  src: string
+  alt: string
+  className?: string
+}) {
   const [failed, setFailed] = useState(false)
 
   if (failed) {
@@ -42,7 +50,7 @@ function GalleryImage({ src, alt }: { src: string; alt: string }) {
 
   return (
     <img
-      className="gallery-main"
+      className={className}
       src={src}
       alt={alt}
       onError={() => setFailed(true)}
@@ -71,6 +79,7 @@ function Thumb({ src, active, onClick }: { src: string; active: boolean; onClick
 
 function App() {
   const [index, setIndex] = useState(0)
+  const [lightboxOpen, setLightboxOpen] = useState(false)
   // const [name, setName] = useState('')
   // const [phone, setPhone] = useState('')
   // const [comment, setComment] = useState('')
@@ -86,6 +95,24 @@ function App() {
   const next = useCallback(() => {
     setIndex((i) => (i + 1) % total)
   }, [total])
+
+  useEffect(() => {
+    if (!lightboxOpen) return
+
+    document.body.style.overflow = 'hidden'
+
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setLightboxOpen(false)
+      if (e.key === 'ArrowLeft') prev()
+      if (e.key === 'ArrowRight') next()
+    }
+
+    window.addEventListener('keydown', onKeyDown)
+    return () => {
+      document.body.style.overflow = ''
+      window.removeEventListener('keydown', onKeyDown)
+    }
+  }, [lightboxOpen, prev, next])
 
   // function handleSubmit(e: React.FormEvent) {
   //   e.preventDefault()
@@ -136,9 +163,27 @@ function App() {
 
           <div className="hero-gallery">
             <div className="gallery">
-              <GalleryImage src={currentSrc} alt={`Диван M31 — фото ${index + 1}`} />
+              <button
+                type="button"
+                className="gallery-open"
+                onClick={() => setLightboxOpen(true)}
+                aria-label="Відкрити фото на весь екран"
+              >
+                <GalleryImage src={currentSrc} alt={`Диван M31 — фото ${index + 1}`} />
+                <span className="gallery-open-hint" aria-hidden>
+                  ⛶
+                </span>
+              </button>
               <div className="gallery-nav">
-                <button type="button" className="gallery-btn" onClick={prev} aria-label="Попереднє фото">
+                <button
+                  type="button"
+                  className="gallery-btn"
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    prev()
+                  }}
+                  aria-label="Попереднє фото"
+                >
                   ‹
                 </button>
                 <div className="gallery-dots">
@@ -147,12 +192,23 @@ function App() {
                       key={GALLERY_IMAGES[i]}
                       type="button"
                       className={`gallery-dot${i === index ? ' active' : ''}`}
-                      onClick={() => setIndex(i)}
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        setIndex(i)
+                      }}
                       aria-label={`Фото ${i + 1}`}
                     />
                   ))}
                 </div>
-                <button type="button" className="gallery-btn" onClick={next} aria-label="Наступне фото">
+                <button
+                  type="button"
+                  className="gallery-btn"
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    next()
+                  }}
+                  aria-label="Наступне фото"
+                >
                   ›
                 </button>
               </div>
@@ -268,6 +324,60 @@ function App() {
           Диван M31 · меблі від виробника · доставка по Україні
         </div>
       </footer>
+
+      {lightboxOpen && (
+        <div
+          className="lightbox"
+          role="dialog"
+          aria-modal="true"
+          aria-label="Перегляд фото"
+          onClick={() => setLightboxOpen(false)}
+        >
+          <button
+            type="button"
+            className="lightbox-close"
+            onClick={() => setLightboxOpen(false)}
+            aria-label="Закрити"
+          >
+            ×
+          </button>
+          <p className="lightbox-counter">
+            {index + 1} / {total}
+          </p>
+          <button
+            type="button"
+            className="lightbox-nav lightbox-prev"
+            onClick={(e) => {
+              e.stopPropagation()
+              prev()
+            }}
+            aria-label="Попереднє фото"
+          >
+            ‹
+          </button>
+          <div
+            className="lightbox-stage"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <GalleryImage
+              src={currentSrc}
+              alt={`Диван M31 — фото ${index + 1}`}
+              className="lightbox-img"
+            />
+          </div>
+          <button
+            type="button"
+            className="lightbox-nav lightbox-next"
+            onClick={(e) => {
+              e.stopPropagation()
+              next()
+            }}
+            aria-label="Наступне фото"
+          >
+            ›
+          </button>
+        </div>
+      )}
     </div>
   )
 }
