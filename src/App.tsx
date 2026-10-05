@@ -1,4 +1,4 @@
-import { useEffect, useState, type FormEvent } from 'react'
+import { useEffect, useRef, useState, type FormEvent, type TouchEvent } from 'react'
 import './App.css'
 
 type Product = {
@@ -60,8 +60,17 @@ function discountPercent(product: Product) {
 function ProductCard({ product }: { product: Product }) {
   const [galleryIndex, setGalleryIndex] = useState(0)
   const [galleryOpen, setGalleryOpen] = useState(false)
+  const touchStartX = useRef<number | null>(null)
   const images = product.images.length ? product.images : ['/images/placeholder.svg']
   const close = () => setGalleryOpen(false)
+  const onTouchStart = (event: TouchEvent<HTMLDivElement>) => { touchStartX.current = event.changedTouches[0]?.clientX ?? null }
+  const onTouchEnd = (event: TouchEvent<HTMLDivElement>) => {
+    if (touchStartX.current === null) return
+    const delta = event.changedTouches[0].clientX - touchStartX.current
+    touchStartX.current = null
+    if (Math.abs(delta) < 45 || images.length < 2) return
+    setGalleryIndex(index => (index + (delta < 0 ? 1 : -1) + images.length) % images.length)
+  }
   useEffect(() => {
     if (!galleryOpen) return
     const onKey = (event: KeyboardEvent) => {
@@ -79,7 +88,7 @@ function ProductCard({ product }: { product: Product }) {
       {images.length > 1 && <span className="photo-count">{images.length} фото</span>}
     </button>
     <div className="product-info">
-      <h3>{product.name}</h3>
+      <h3>{product.is_promo && <span className="promo-fire" aria-label="Акція">🔥 </span>}{product.name}</h3>
       <p>{product.description}</p>
       <div className="product-price"><strong>{money(product.price)}</strong>{product.is_promo && product.old_price && <del>{money(product.old_price)}</del>}</div>
       
@@ -88,7 +97,7 @@ function ProductCard({ product }: { product: Product }) {
       <button type="button" className="lightbox-close" onClick={close} aria-label="Закрити">×</button>
       <p className="lightbox-counter">{product.name} · {galleryIndex + 1} / {images.length}</p>
       {images.length > 1 && <button type="button" className="lightbox-nav lightbox-prev" onClick={e => { e.stopPropagation(); setGalleryIndex(i => (i - 1 + images.length) % images.length) }} aria-label="Попереднє фото">‹</button>}
-      <div className="lightbox-stage" onClick={e => e.stopPropagation()}><img className="lightbox-img" src={images[galleryIndex]} alt={`${product.name} — фото ${galleryIndex + 1}`}/></div>
+      <div className="lightbox-stage" onClick={e => e.stopPropagation()} onTouchStart={onTouchStart} onTouchEnd={onTouchEnd}><img className="lightbox-img" src={images[galleryIndex]} alt={`${product.name} — фото ${galleryIndex + 1}`}/></div>
       {images.length > 1 && <button type="button" className="lightbox-nav lightbox-next" onClick={e => { e.stopPropagation(); setGalleryIndex(i => (i + 1) % images.length) }} aria-label="Наступне фото">›</button>}
       {images.length > 1 && <div className="product-gallery-thumbs" onClick={e => e.stopPropagation()}>{images.map((src, i) => <button type="button" key={`${src}-${i}`} className={i === galleryIndex ? 'active' : ''} onClick={() => setGalleryIndex(i)} aria-label={`Фото ${i + 1}`}><img src={src} alt=""/></button>)}</div>}
     </div>}
@@ -172,7 +181,7 @@ function Admin() {
     {!session ? <form className="admin-login" onSubmit={signIn}><span className="eyebrow">Керування магазином</span><h1>Вхід менеджера</h1><p>Увійдіть з обліковим записом Supabase.</p><label>Email<input name="email" type="email" autoComplete="username" required /></label><label>Пароль<input name="password" type="password" autoComplete="current-password" required /></label><button className="btn btn-primary" disabled={!configured || busy}>{busy ? 'Зачекайте…' : 'Увійти'}</button>{error && <p className="error-text">{error}</p>}</form> : <section className="admin-content"><div className="admin-heading"><div><span className="eyebrow">Каталог</span><h1>Товари</h1></div><button className="btn btn-ghost" onClick={logout}>Вийти</button></div>
       {notice && <p className="success-text">{notice}</p>}{error && <p className="error-text">{error}</p>}{diagnostic && <details className="diagnostic"><summary>Діагностика останнього запиту</summary><pre>{diagnostic}</pre></details>}
       <div className="admin-layout"><div className="admin-list"><div className="admin-list-head"><h2>У каталозі · {products.length}</h2><button className="btn btn-primary" onClick={() => setEditing({ id: '', name: '', description: '', price: 0, old_price: null, is_promo: false, images: [], published: true })}>Додати диван +</button></div>
-        {products.map(product => <article className="admin-row" key={product.id}><img src={product.images[0] || '/images/placeholder.svg'} alt=""/><div className="admin-row-copy"><strong>{product.name}</strong><span>{money(product.price)} · {product.published ? 'Опубліковано' : 'Чернетка'}{product.is_promo ? ' · Акція' : ''}</span></div><button onClick={() => setEditing(product)}>Змінити</button><button className="delete-button" onClick={() => removeProduct(product)}>Видалити</button></article>)}
+        {products.map(product => <article className="admin-row" key={product.id}><img src={product.images[0] || '/images/placeholder.svg'} alt=""/><div className="admin-row-copy"><strong>{product.is_promo && '🔥 '}{product.name}</strong><span>{money(product.price)} · {product.published ? 'Опубліковано' : 'Чернетка'}{product.is_promo ? ' · Акція' : ''}</span></div><button onClick={() => setEditing(product)}>Змінити</button><button className="delete-button" onClick={() => removeProduct(product)}>Видалити</button></article>)}
       </div>
       {editing && <form className="product-editor" key={editing.id || 'new'} onSubmit={saveProduct}><div className="editor-head"><h2>{editing.name ? 'Змінити товар' : 'Новий товар'}</h2><button type="button" aria-label="Закрити" onClick={() => setEditing(null)}>×</button></div><label>Назва<input name="name" required defaultValue={editing.name}/></label><label>Опис<textarea name="description" rows={4} defaultValue={editing.description}/></label><div className="editor-prices"><label>Ціна, ₴<input name="price" type="number" min="0" required defaultValue={editing.price || ''}/></label><label>Ціна до знижки, ₴<input name="old_price" type="number" min="0" defaultValue={editing.old_price || ''}/></label></div><label className="check-label promo-check"><input type="checkbox" name="is_promo" defaultChecked={editing.is_promo}/> Позначити як акцію{editing.old_price && editing.price ? <span>Знижка зараз −{discountPercent(editing)}%</span> : null}</label><label>Фотографії<input name="photos" type="file" accept="image/*" multiple/><small>Можна вибрати кілька файлів. Поточні фотографії залишаться.</small></label>{editing.images.length > 0 && <div className="editor-photos">{editing.images.map(url => <img key={url} src={url} alt="Фото товару"/>)}</div>}<label className="check-label"><input type="checkbox" name="published" defaultChecked={editing.published}/> Опублікувати на сайті</label><button className="btn btn-primary" disabled={busy}>{busy ? 'Зберігаємо…' : 'Зберегти товар'}</button></form>}
       </div>
