@@ -57,6 +57,12 @@ function discountPercent(product: Product) {
   return Math.round((1 - product.price / product.old_price) * 100)
 }
 
+function getStorageObjectPath(publicUrl: string) {
+  const marker = '/storage/v1/object/public/sofas/'
+  const index = publicUrl.indexOf(marker)
+  return index < 0 ? null : decodeURIComponent(publicUrl.slice(index + marker.length))
+}
+
 function ProductCard({ product }: { product: Product }) {
   const [galleryIndex, setGalleryIndex] = useState(0)
   const [galleryOpen, setGalleryOpen] = useState(false)
@@ -110,6 +116,7 @@ function Admin() {
   })
   const [products, setProducts] = useState<Product[]>([])
   const [editing, setEditing] = useState<Product | null>(null)
+  const [editorImages, setEditorImages] = useState<string[]>([])
   const [busy, setBusy] = useState(false)
   const [notice, setNotice] = useState('')
   const [error, setError] = useState('')
@@ -120,6 +127,7 @@ function Admin() {
     setProducts(rows)
   }
   useEffect(() => { if (session) load(session.access_token).catch((e: Error) => setError(e.message)) }, [session])
+  useEffect(() => { setEditorImages(editing?.images.slice() || []) }, [editing])
 
   async function signIn(e: FormEvent<HTMLFormElement>) {
     e.preventDefault(); setError(''); setBusy(true)
@@ -136,7 +144,8 @@ function Admin() {
     const form = new FormData(e.currentTarget)
     try {
       const id = editing?.id || crypto.randomUUID()
-      const images = editing?.images.slice() || []
+      const images = editorImages.slice()
+      const removedImages = editing?.images.filter(url => !editorImages.includes(url)) || []
       const files = form.getAll('photos').filter((item): item is File => item instanceof File && item.size > 0)
       for (const file of files) {
         setNotice(`Завантаження фото ${images.length + 1} з ${images.length + files.length}…`)
@@ -163,8 +172,20 @@ function Admin() {
       if (!savedRows.length) {
         throw new Error(`Supabase прийняв запит, але не повернув зміненого товару. Для ${method} це зазвичай означає, що рядок не знайдено або його заблокувала політика доступу. Перевірте таблицю products та RLS.`)
       }
+      const storageCleanupErrors: string[] = []
+      for (const imageUrl of removedImages) {
+        const objectPath = getStorageObjectPath(imageUrl)
+        if (!objectPath) continue
+        const response = await fetch(`${apiUrl}/storage/v1/object/sofas`, {
+          method: 'DELETE',
+          headers: { apikey: anonKey!, Authorization: `Bearer ${session.access_token}`, 'Content-Type': 'application/json' },
+          body: JSON.stringify({ prefixes: [objectPath] }),
+        })
+        if (!response.ok) storageCleanupErrors.push(`${objectPath}: ${await response.text()}`)
+      }
       setEditing(null); setNotice('Товар збережено в Supabase'); await load(session.access_token)
-      setDiagnostic(JSON.stringify({ step: 'database', method, endpoint: path, payload: product, response: savedRows }, null, 2) + '\n\nСписок товарів оновлено.')
+      if (storageCleanupErrors.length) setNotice(`Товар збережено, але ${storageCleanupErrors.length} фото не вдалося видалити зі сховища.`)
+      setDiagnostic(JSON.stringify({ step: 'database', method, endpoint: path, payload: product, response: savedRows, removedPhotos: removedImages.length - storageCleanupErrors.length, storageCleanupErrors }, null, 2) + '\n\nСписок товарів оновлено.')
     } catch (err) { setError((err as Error).message); setNotice(''); setDiagnostic(prev => `${prev}\n\nПомилка: ${(err as Error).message}`) } finally { setBusy(false) }
   }
 
@@ -183,7 +204,7 @@ function Admin() {
       <div className="admin-layout"><div className="admin-list"><div className="admin-list-head"><h2>У каталозі · {products.length}</h2><button className="btn btn-primary" onClick={() => setEditing({ id: '', name: '', description: '', price: 0, old_price: null, is_promo: false, images: [], published: true })}>Додати диван +</button></div>
         {products.map(product => <article className="admin-row" key={product.id}><img src={product.images[0] || '/images/placeholder.svg'} alt=""/><div className="admin-row-copy"><strong>{product.is_promo && '🔥 '}{product.name}</strong><span>{money(product.price)} · {product.published ? 'Опубліковано' : 'Чернетка'}{product.is_promo ? ' · Акція' : ''}</span></div><button onClick={() => setEditing(product)}>Змінити</button><button className="delete-button" onClick={() => removeProduct(product)}>Видалити</button></article>)}
       </div>
-      {editing && <form className="product-editor" key={editing.id || 'new'} onSubmit={saveProduct}><div className="editor-head"><h2>{editing.name ? 'Змінити товар' : 'Новий товар'}</h2><button type="button" aria-label="Закрити" onClick={() => setEditing(null)}>×</button></div><label>Назва<input name="name" required defaultValue={editing.name}/></label><label>Опис<textarea name="description" rows={4} defaultValue={editing.description}/></label><div className="editor-prices"><label>Ціна, ₴<input name="price" type="number" min="0" required defaultValue={editing.price || ''}/></label><label>Ціна до знижки, ₴<input name="old_price" type="number" min="0" defaultValue={editing.old_price || ''}/></label></div><label className="check-label promo-check"><input type="checkbox" name="is_promo" defaultChecked={editing.is_promo}/> Позначити як акцію{editing.old_price && editing.price ? <span>Знижка зараз −{discountPercent(editing)}%</span> : null}</label><label>Фотографії<input name="photos" type="file" accept="image/*" multiple/><small>Можна вибрати кілька файлів. Поточні фотографії залишаться.</small></label>{editing.images.length > 0 && <div className="editor-photos">{editing.images.map(url => <img key={url} src={url} alt="Фото товару"/>)}</div>}<label className="check-label"><input type="checkbox" name="published" defaultChecked={editing.published}/> Опублікувати на сайті</label><button className="btn btn-primary" disabled={busy}>{busy ? 'Зберігаємо…' : 'Зберегти товар'}</button></form>}
+      {editing && <form className="product-editor" key={editing.id || 'new'} onSubmit={saveProduct}><div className="editor-head"><h2>{editing.name ? 'Змінити товар' : 'Новий товар'}</h2><button type="button" aria-label="Закрити" onClick={() => setEditing(null)}>×</button></div><label>Назва<input name="name" required defaultValue={editing.name}/></label><label>Опис<textarea name="description" rows={4} defaultValue={editing.description}/></label><div className="editor-prices"><label>Ціна, ₴<input name="price" type="number" min="0" required defaultValue={editing.price || ''}/></label><label>Ціна до знижки, ₴<input name="old_price" type="number" min="0" defaultValue={editing.old_price || ''}/></label></div><label className="check-label promo-check"><input type="checkbox" name="is_promo" defaultChecked={editing.is_promo}/> Позначити як акцію{editing.old_price && editing.price ? <span>Знижка зараз −{discountPercent(editing)}%</span> : null}</label><label>Фотографії<input name="photos" type="file" accept="image/*" multiple/><small>Оберіть додаткові фото. Щоб видалити поточне, натисніть × на його мініатюрі.</small></label>{editorImages.length > 0 && <div className="editor-photos">{editorImages.map(url => <div className="editor-photo" key={url}><img src={url} alt="Фото товару"/><button type="button" aria-label="Видалити фото" title="Видалити фото" onClick={() => setEditorImages(current => current.filter(image => image !== url))}><svg viewBox="0 0 16 16" aria-hidden="true"><path d="m4 4 8 8M12 4l-8 8"/></svg></button></div>)}</div>}<label className="check-label"><input type="checkbox" name="published" defaultChecked={editing.published}/> Опублікувати на сайті</label><button className="btn btn-primary" disabled={busy}>{busy ? 'Зберігаємо…' : 'Зберегти товар'}</button></form>}
       </div>
     </section>}
   </main>

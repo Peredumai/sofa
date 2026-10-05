@@ -793,8 +793,12 @@
 .promo-check span { margin-left: auto; font-size: .8rem; font-weight: 700; }
 .product-editor input[type=file] { width: 100%; font-size: .8rem; }
 .product-editor small { color: #5c635c; font-weight: 400; }
-.editor-photos { display: flex; gap: .5rem; overflow-x: auto; }
-.editor-photos img { width: 62px; height: 52px; border-radius: 8px; object-fit: cover; }
+.editor-photos { display: flex; gap: .65rem; overflow-x: auto; padding: .35rem .15rem .5rem; }
+.editor-photo { position: relative; flex: 0 0 68px; width: 68px; height: 56px; border-radius: 9px; background: #e8dfd3; }
+.editor-photos img { display: block; width: 100%; height: 100%; border: 1px solid rgba(44,62,54,.1); border-radius: 9px; object-fit: cover; }
+.editor-photo button { position: absolute; top: 4px; right: 4px; display: flex; align-items: center; justify-content: center; width: 18px; height: 18px; padding: 0; border: 0; border-radius: 50%; background: rgba(35,43,38,.76); color: #fff; cursor: pointer; transition: background .15s, transform .15s; }
+.editor-photo button:hover { background: #a64d3e; transform: scale(1.08); }
+.editor-photo button svg { display: block; width: 10px; height: 10px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; }
 .product-editor .check-label { display: flex; align-items: center; gap: .6rem; }
 .product-editor .btn { width: 100%; }
 .notice { max-width: 1240px; margin: 0 auto 1rem; padding: .9rem 1rem; border-radius: 12px; background: #efe3d5; color: #60432f; font-size: .9rem; }
