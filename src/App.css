@@ -729,7 +729,7 @@
 .carousel-dots button { width: 8px; height: 8px; padding: 0; border: 0; border-radius: 50%; background: rgba(255,255,255,.65); cursor: pointer; }
 .carousel-dots button.active { background: white; transform: scale(1.2); }
 .catalog-section { padding-top: 5rem; }
-#catalog, #about { scroll-margin-top: calc(var(--header-height) + 1rem); }
+#catalog, #about { scroll-margin-top: calc(var(--header-height) + 1.5rem); }
 .product-grid { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 1.4rem; }
 .product-card { position: relative; overflow: hidden; border-radius: var(--radius); background: var(--white); box-shadow: 0 12px 38px rgba(44,62,54,.08); }
 .product-photo { display: block; position: relative; overflow: hidden; width: 100%; padding: 0; border: 0; cursor: zoom-in; aspect-ratio: 4/3; background: var(--sand); }
