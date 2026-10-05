@@ -1,32 +1,25 @@
-# React + TypeScript + Vite
+# Sofa M31 storefront
 
-This template provides a minimal setup to get React working in Vite with HMR and some Oxlint rules.
+React + Vite storefront with a product catalog and a small manager area at `/admin`.
+The homepage includes a rotating photo carousel, a product catalog, and a manager area at `/admin`.
 
-Currently, two official plugins are available:
+## Supabase setup
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+1. Create a Supabase project and run [`supabase/schema.sql`](supabase/schema.sql) in the SQL Editor. If the products table already exists, run [`supabase/migrations/20261005_add_promo.sql`](supabase/migrations/20261005_add_promo.sql) to add the promotion field.
+2. In Authentication settings, disable public sign-ups. Create a manager account in Authentication → Users.
+3. Copy `.env.example` to `.env.local` and fill in the project URL and publishable (anon) key.
+4. Add the same two `VITE_` values to the Vercel project environment variables and redeploy.
+5. Open `/admin` to sign in and manage products.
 
-## React Compiler
+To show a promotion, check “Позначити як акцію” and enter the regular price in “Ціна до знижки”. The site calculates the discount percentage from the two prices.
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+The publishable key is designed to be present in a browser app. Row Level Security protects
+product writes and photo uploads; never put a Supabase service-role key in a `VITE_` variable.
+Photo uploads accept JPEG, PNG, WebP, and AVIF up to 10 MB each. Newly uploaded images are
+added to the product; the current editor does not remove individual existing photos.
 
-## Expanding the Oxlint configuration
+## Commands
 
-If you are developing a production application, we recommend enabling type-aware lint rules by installing `oxlint-tsgolint` and editing `.oxlintrc.json`:
-
-```json
-{
-  "$schema": "./node_modules/oxlint/configuration_schema.json",
-  "plugins": ["react", "typescript", "oxc"],
-  "options": {
-    "typeAware": true
-  },
-  "rules": {
-    "react/rules-of-hooks": "error",
-    "react/only-export-components": ["warn", { "allowConstantExport": true }]
-  }
-}
-```
-
-See the [Oxlint rules documentation](https://oxc.rs/docs/guide/usage/linter/rules) for the full list of rules and categories.
+- `npm run dev` — start local development
+- `npm run build` — create the production bundle
+- `npm run preview` — preview the production bundle
