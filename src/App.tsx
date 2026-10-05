@@ -14,7 +14,11 @@ type Product = {
 }
 
 type Session = { access_token: string; refresh_token: string; user: { email: string } }
-const apiUrl = import.meta.env.VITE_SUPABASE_URL?.replace(/\/$/, '')
+// VITE_SUPABASE_URL should be the project base URL. Strip service suffixes
+// if one was pasted accidentally so auth, REST and Storage all use the same base.
+const apiUrl = import.meta.env.VITE_SUPABASE_URL?.trim()
+  .replace(/\/+$/, '')
+  .replace(/\/(?:rest|auth|storage)\/v1$/i, '')
 const anonKey = import.meta.env.VITE_SUPABASE_ANON_KEY
 const configured = Boolean(apiUrl && anonKey)
 const phone = '+380991036666'
@@ -44,7 +48,7 @@ async function request<T>(path: string, options: RequestInit = {}, token?: strin
 }
 
 async function getProducts(): Promise<Product[]> {
-  return request<Product[]>('/products?select=*&published=eq.true&order=created_at.desc')
+  return request<Product[]>('/rest/v1/products?select=*&published=eq.true&order=created_at.desc')
 }
 
 function money(value: number) { return `${new Intl.NumberFormat('uk-UA').format(value)} ₴` }
@@ -103,7 +107,7 @@ function Admin() {
   const [diagnostic, setDiagnostic] = useState('')
 
   const load = async (token: string) => {
-    const rows = await request<Product[]>('/products?select=*&order=created_at.desc', {}, token)
+    const rows = await request<Product[]>('/rest/v1/products?select=*&order=created_at.desc', {}, token)
     setProducts(rows)
   }
   useEffect(() => { if (session) load(session.access_token).catch((e: Error) => setError(e.message)) }, [session])
@@ -143,7 +147,7 @@ function Admin() {
       // Only an existing database id should use PATCH.
       const isUpdate = Boolean(editing?.id)
       const method = isUpdate ? 'PATCH' : 'POST'
-      const path = `/products${isUpdate ? `?id=eq.${id}` : ''}`
+      const path = `/rest/v1/products${isUpdate ? `?id=eq.${id}` : ''}`
       setNotice('Надсилаємо товар до бази…')
       setDiagnostic(JSON.stringify({ step: 'database', method, endpoint: path, payload: product }, null, 2))
       const savedRows = await request<Product[]>(path, { method, headers: { Prefer: 'return=representation' }, body: JSON.stringify(product) }, session.access_token)
@@ -157,7 +161,7 @@ function Admin() {
 
   async function removeProduct(product: Product) {
     if (!session || !window.confirm(`Видалити «${product.name}»?`)) return
-    try { await request(`/products?id=eq.${product.id}`, { method: 'DELETE' }, session.access_token); await load(session.access_token); setNotice('Товар видалено') }
+    try { await request(`/rest/v1/products?id=eq.${product.id}`, { method: 'DELETE' }, session.access_token); await load(session.access_token); setNotice('Товар видалено') }
     catch (err) { setError((err as Error).message) }
   }
 
