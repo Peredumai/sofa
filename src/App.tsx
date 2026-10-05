@@ -185,6 +185,7 @@ function Storefront() {
   const [loadError, setLoadError] = useState('')
   const [slideIndex, setSlideIndex] = useState(0)
   const [carouselPaused, setCarouselPaused] = useState(false)
+  const [footerTaps, setFooterTaps] = useState(0)
   useEffect(() => { getProducts().then(rows => setProducts(rows.length ? rows : [])).catch((err: Error) => setLoadError(err.message)) }, [])
   const slides = products.length
     ? products.map(product => ({ src: product.images[0] || '/images/placeholder.svg', label: product.name }))
@@ -201,7 +202,7 @@ function Storefront() {
       <section className="section catalog-section" id="catalog"><div className="container"><div className="section-head"><span className="eyebrow">Знайдіть свій</span><h2>Каталог диванів</h2><p>Перегляньте моделі та зателефонуйте, щоб уточнити розміри й варіанти тканин.</p></div>{loadError && <p className="catalog-message">Не вдалося завантажити каталог із бази. Показуємо доступні товари. {loadError}</p>}{products.length ? <div className="product-grid">{products.map(product => <ProductCard key={product.id} product={product}/>)}</div> : <p className="catalog-message">Наразі товарів немає. Зателефонуйте — допоможемо підібрати модель.</p>}</div></section>
       <section className="section section-alt" id="about"><div className="container"><div className="highlight-card"><div><div className="highlight-icon" aria-hidden>🛠</div><span className="eyebrow">Напряму від виробника</span><h3>Продумано для щоденного комфорту</h3><p>Виготовляємо меблі з увагою до деталей. Допоможемо обрати матеріали та конфігурацію, а готове замовлення доставимо по Україні.</p></div><div className="features-grid">{features.map(text => <article className="feature-card" key={text}><span aria-hidden>✓</span><p>{text}</p></article>)}</div></div></div></section>
       <section className="contact-band"><div className="container contact-inner"><div><span className="eyebrow">Є питання?</span><h2>Допоможемо обрати ваш диван</h2></div><a className="btn btn-primary" href={`tel:${phone}`}>Зателефонувати · {phoneLabel}</a></div></section>
-    </main><footer className="site-footer"><div className="container footer-inner"><span>Меблі від виробника · доставка по Україні</span><a href="/admin">Для менеджера</a></div></footer></div>
+    </main><footer className="site-footer"><div className="container footer-inner"><button type="button" className="footer-secret-trigger" aria-label="Меблі від виробника · доставка по Україні" onClick={() => setFooterTaps(count => Math.min(count + 1, 10))}>Меблі від виробника · доставка по Україні</button>{footerTaps >= 10 && <a className="footer-manager-link" href="/admin">Вхід менеджера ↗</a>}</div></footer></div>
 }
 
 function App() {

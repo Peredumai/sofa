@@ -745,6 +745,9 @@
 .contact-inner h2 { max-width: 18ch; margin-top: .4rem; font-size: clamp(1.8rem,4vw,2.6rem); }
 .contact-inner .eyebrow { color: #e9b99d; }
 .footer-inner { display: flex; align-items: center; justify-content: space-between; gap: 1rem; }
+.footer-secret-trigger { padding: 0; border: 0; background: transparent; color: var(--muted); font: inherit; font-size: .85rem; cursor: pointer; }
+.footer-secret-trigger:focus-visible { outline: 2px solid var(--clay); outline-offset: 4px; border-radius: 2px; }
+.footer-manager-link { color: var(--clay-dark); text-decoration: none; font-size: .85rem; font-weight: 700; }
 .catalog-message { padding: 1rem; border-radius: 12px; background: var(--white); color: var(--muted); }
 
 /* Manager area */
