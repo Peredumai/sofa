@@ -84,13 +84,21 @@ function ProductCard({ product, categoryName }: { product: Product; categoryName
   }
   useEffect(() => {
     if (!galleryOpen) return
+    const previousBodyOverflow = document.body.style.overflow
+    const previousRootOverflow = document.documentElement.style.overflow
+    document.body.style.overflow = 'hidden'
+    document.documentElement.style.overflow = 'hidden'
     const onKey = (event: KeyboardEvent) => {
       if (event.key === 'Escape') close()
       if (event.key === 'ArrowLeft') setGalleryIndex(i => (i - 1 + images.length) % images.length)
       if (event.key === 'ArrowRight') setGalleryIndex(i => (i + 1) % images.length)
     }
     window.addEventListener('keydown', onKey)
-    return () => window.removeEventListener('keydown', onKey)
+    return () => {
+      document.body.style.overflow = previousBodyOverflow
+      document.documentElement.style.overflow = previousRootOverflow
+      window.removeEventListener('keydown', onKey)
+    }
   }, [galleryOpen, images.length])
   return <article className="product-card">
     <button type="button" className="product-photo" onClick={() => { setGalleryIndex(0); setGalleryOpen(true) }} aria-label={`Відкрити галерею: ${product.name}`}>
