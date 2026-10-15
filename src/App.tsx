@@ -74,6 +74,28 @@ function getStorageObjectPath(publicUrl: string) {
   return index < 0 ? null : decodeURIComponent(publicUrl.slice(index + marker.length))
 }
 
+function productPageUrl(id: string, category: string, sort: 'newest' | 'price-desc', page: number) {
+  const query = new URLSearchParams()
+  if (category !== 'all') query.set('category', category)
+  if (sort !== 'newest') query.set('sort', sort)
+  if (page > 1) query.set('page', String(page))
+  const suffix = query.toString()
+  return `/product/${id}${suffix ? `?${suffix}` : ''}`
+}
+
+function catalogReturnUrl(search: string) {
+  const current = new URLSearchParams(search)
+  const query = new URLSearchParams()
+  const category = current.get('category')
+  const sort = current.get('sort')
+  const page = current.get('page')
+  if (category) query.set('category', category)
+  if (sort === 'price-desc') query.set('sort', sort)
+  if (page && Number(page) > 1) query.set('page', String(Number(page)))
+  const suffix = query.toString()
+  return `/${suffix ? `?${suffix}` : ''}#catalog`
+}
+
 function HeaderContacts() {
   return <div className="header-contact-links" aria-label="Написати продавцю">
     <a className="header-contact telegram-contact" href={telegramUrl} aria-label="Написати в Telegram" title="Telegram">
@@ -85,11 +107,13 @@ function HeaderContacts() {
   </div>
 }
 
-function ProductCard({ product, categoryName }: { product: Product; categoryName?: string }) {
+function ProductCard({ product, categoryName, category, sort, page }: { product: Product; categoryName?: string; category: string; sort: 'newest' | 'price-desc'; page: number }) {
   const [galleryIndex, setGalleryIndex] = useState(0)
   const [galleryOpen, setGalleryOpen] = useState(false)
   const touchStartX = useRef<number | null>(null)
   const images = product.images.length ? product.images : ['/images/placeholder.svg']
+  const detailUrl = productPageUrl(product.id, category, sort, page)
+  const rememberCatalogPosition = () => sessionStorage.setItem('catalog-return-scroll', String(window.scrollY))
   const close = () => setGalleryOpen(false)
   const onTouchStart = (event: TouchEvent<HTMLDivElement>) => { touchStartX.current = event.changedTouches[0]?.clientX ?? null }
   const onTouchEnd = (event: TouchEvent<HTMLDivElement>) => {
@@ -125,10 +149,10 @@ function ProductCard({ product, categoryName }: { product: Product; categoryName
     </button>
     <div className="product-info">
       {categoryName && <span className="product-category-tag">{categoryName}</span>}
-      <a className="product-title-link" href={`/product/${product.id}`}><h3>{product.is_promo && <span className="promo-fire" aria-label="Акція">🔥 </span>}{product.name}</h3></a>
+      <a className="product-title-link" href={detailUrl} onClick={rememberCatalogPosition}><h3>{product.is_promo && <span className="promo-fire" aria-label="Акція">🔥 </span>}{product.name}</h3></a>
       <p>{product.description}</p>
       <div className="product-price"><strong>{money(product.price)}</strong>{product.is_promo && product.old_price && <del>{money(product.old_price)}</del>}</div>
-      <a className="btn btn-primary product-details-link" href={`/product/${product.id}`}>Детальніше про диван</a>
+      <a className="btn btn-primary product-details-link" href={detailUrl} onClick={rememberCatalogPosition}>Детальніше про диван</a>
     </div>
     {galleryOpen && <div className="lightbox" role="dialog" aria-modal="true" aria-label={`Фотографії: ${product.name}`} onClick={close}>
       <button type="button" className="lightbox-close" onClick={close} aria-label="Закрити">×</button>
@@ -283,6 +307,7 @@ function ProductDetail({ productId }: { productId: string }) {
   const [imageIndex, setImageIndex] = useState(0)
   const [lightboxOpen, setLightboxOpen] = useState(false)
   const touchStartX = useRef<number | null>(null)
+  const backUrl = catalogReturnUrl(window.location.search)
 
   useEffect(() => {
     let active = true
@@ -328,24 +353,27 @@ function ProductDetail({ productId }: { productId: string }) {
   }, [lightboxOpen, photos.length])
 
   if (loading) return <main className="detail-message"><p>Завантажуємо товар…</p></main>
-  if (!product) return <main className="detail-message"><h1>Товар не знайдено</h1><p>{error || 'Можливо, його зняли з продажу або посилання застаріло.'}</p><a className="btn btn-primary" href="/#catalog">Повернутися до каталогу</a></main>
+  if (!product) return <main className="detail-message"><h1>Товар не знайдено</h1><p>{error || 'Можливо, його зняли з продажу або посилання застаріло.'}</p><a className="btn btn-primary" href={backUrl}>Повернутися до каталогу</a></main>
 
-  return <div className="landing product-detail-page"><header className="site-header"><div className="container header-inner"><a href="/" className="logo"><span className="logo-mark">Диван</span><span className="logo-sub">від виробника</span></a><nav className="main-nav"><a href="/#catalog">Каталог</a><a href="/#about">Про нас</a></nav><HeaderContacts/><a className="header-cta" href={`tel:${phone}`}>Зателефонувати</a></div></header>
-    <main className="container detail-main"><a className="detail-back" href="/#catalog">← До каталогу</a><div className="detail-layout"><div className="detail-gallery-column"><button type="button" className="detail-main-photo" onClick={() => setLightboxOpen(true)} aria-label="Відкрити фото на весь екран"><img src={photos[imageIndex]} alt={`${product.name} — фото ${imageIndex + 1}`}/><span>Збільшити фото ⤢</span></button>{photos.length > 1 && <div className="detail-thumbnails">{photos.map((photo, index) => <button type="button" key={`${photo}-${index}`} className={index === imageIndex ? 'active' : ''} onClick={() => setImageIndex(index)} aria-label={`Фото ${index + 1}`}><img src={photo} alt=""/></button>)}</div>}</div>
+  return <div className="landing product-detail-page"><header className="site-header"><div className="container header-inner"><a href="/" className="logo"><span className="logo-mark">Диван</span><span className="logo-sub">від виробника</span></a><HeaderContacts/><a className="header-cta" href={`tel:${phone}`}>Зателефонувати</a></div></header>
+    <main className="container detail-main"><a className="detail-back" href={backUrl}>← До каталогу</a><div className="detail-layout"><div className="detail-gallery-column"><button type="button" className="detail-main-photo" onClick={() => setLightboxOpen(true)} aria-label="Відкрити фото на весь екран"><img src={photos[imageIndex]} alt={`${product.name} — фото ${imageIndex + 1}`}/><span>Збільшити фото ⤢</span></button>{photos.length > 1 && <div className="detail-thumbnails">{photos.map((photo, index) => <button type="button" key={`${photo}-${index}`} className={index === imageIndex ? 'active' : ''} onClick={() => setImageIndex(index)} aria-label={`Фото ${index + 1}`}><img src={photo} alt=""/></button>)}</div>}</div>
       <article className="detail-copy">{categoryName && <span className="product-category-tag">{categoryName}</span>}{product.is_promo && <span className="detail-promo">🔥 Акційна пропозиція{discountPercent(product) ? ` · −${discountPercent(product)}%` : ''}</span>}<h1>{product.name}</h1><div className="detail-prices"><strong>{money(product.price)}</strong>{product.is_promo && product.old_price && <del>{money(product.old_price)}</del>}</div><h2>Опис</h2><p className="detail-description">{product.description || 'Зв’яжіться з нами, щоб дізнатися більше про цю модель.'}</p><div className="detail-actions"><a className="btn btn-primary" href={`tel:${phone}`}>Зателефонувати · {phoneLabel}</a><a className="btn btn-ghost" href={telegramUrl}>Написати в Telegram</a><a className="btn btn-ghost" href={viberUrl}>Написати у Viber</a></div><p className="detail-delivery">Доставка по Україні · Допоможемо підібрати тканину й розмір</p></article></div></main>
     {lightboxOpen && <div className="lightbox" role="dialog" aria-modal="true" aria-label={`Фотогалерея: ${product.name}`} onClick={() => setLightboxOpen(false)}><button type="button" className="lightbox-close" onClick={() => setLightboxOpen(false)} aria-label="Закрити">×</button><p className="lightbox-counter">{product.name} · {imageIndex + 1} / {photos.length}</p>{photos.length > 1 && <button type="button" className="lightbox-nav lightbox-prev" onClick={event => { event.stopPropagation(); previousPhoto() }} aria-label="Попереднє фото">‹</button>}<div className="lightbox-stage" onClick={event => event.stopPropagation()} onTouchStart={onTouchStart} onTouchEnd={onTouchEnd}><img className="lightbox-img" src={photos[imageIndex]} alt={`${product.name} — фото ${imageIndex + 1}`}/></div>{photos.length > 1 && <button type="button" className="lightbox-nav lightbox-next" onClick={event => { event.stopPropagation(); nextPhoto() }} aria-label="Наступне фото">›</button>}</div>}
   </div>
 }
 
 function Storefront() {
+  const initialQuery = new URLSearchParams(window.location.search)
+  const initialPage = Number(initialQuery.get('page'))
   const [products, setProducts] = useState<Product[]>([])
   const [categories, setCategories] = useState<Category[]>([])
-  const [selectedCategory, setSelectedCategory] = useState('all')
-  const [sortOrder, setSortOrder] = useState<'newest' | 'price-desc'>('newest')
+  const [selectedCategory, setSelectedCategory] = useState(initialQuery.get('category') || 'all')
+  const [sortOrder, setSortOrder] = useState<'newest' | 'price-desc'>(initialQuery.get('sort') === 'price-desc' ? 'price-desc' : 'newest')
   const [sortMenuOpen, setSortMenuOpen] = useState(false)
   const sortMenuRef = useRef<HTMLDivElement>(null)
-  const [page, setPage] = useState(1)
+  const [page, setPage] = useState(Number.isInteger(initialPage) && initialPage > 0 ? initialPage : 1)
   const [loadError, setLoadError] = useState('')
+  const [catalogLoaded, setCatalogLoaded] = useState(false)
   const [slideIndex, setSlideIndex] = useState(0)
   const [carouselPaused, setCarouselPaused] = useState(false)
   const [footerTaps, setFooterTaps] = useState(0)
@@ -353,7 +381,25 @@ function Storefront() {
     Promise.all([getProducts(), getCategories()])
       .then(([rows, categoryRows]) => { setProducts(rows); setCategories(categoryRows) })
       .catch((err: Error) => setLoadError(err.message))
+      .finally(() => setCatalogLoaded(true))
   }, [])
+  useEffect(() => {
+    const url = new URL(window.location.href)
+    if (selectedCategory === 'all') url.searchParams.delete('category')
+    else url.searchParams.set('category', selectedCategory)
+    if (sortOrder === 'newest') url.searchParams.delete('sort')
+    else url.searchParams.set('sort', sortOrder)
+    if (page <= 1) url.searchParams.delete('page')
+    else url.searchParams.set('page', String(page))
+    window.history.replaceState(window.history.state, '', `${url.pathname}${url.search}${url.hash}`)
+  }, [selectedCategory, sortOrder, page])
+  useEffect(() => {
+    if (!catalogLoaded) return
+    const savedPosition = sessionStorage.getItem('catalog-return-scroll')
+    if (savedPosition === null) return
+    sessionStorage.removeItem('catalog-return-scroll')
+    requestAnimationFrame(() => window.scrollTo({ top: Number(savedPosition) || 0, behavior: 'auto' }))
+  }, [catalogLoaded])
   useEffect(() => {
     if (!sortMenuOpen) return
     const closeOnOutside = (event: PointerEvent) => {
@@ -372,6 +418,13 @@ function Storefront() {
     .sort((a, b) => sortOrder === 'price-desc' ? b.price - a.price : (b.created_at || '').localeCompare(a.created_at || ''))
   const pageSize = 9
   const pageCount = Math.max(1, Math.ceil(filteredProducts.length / pageSize))
+  useEffect(() => {
+    if (catalogLoaded && page > pageCount) setPage(pageCount)
+  }, [catalogLoaded, page, pageCount])
+  const goToPage = (nextPage: number) => {
+    setPage(nextPage)
+    requestAnimationFrame(() => document.getElementById('catalog')?.scrollIntoView({ behavior: 'smooth', block: 'start' }))
+  }
   const visibleProducts = filteredProducts.slice((page - 1) * pageSize, page * pageSize)
   const slides = products.length
     ? products.map(product => ({ src: product.images[0] || '/images/placeholder.svg', label: product.name }))
@@ -388,7 +441,7 @@ function Storefront() {
       <section className="section catalog-section"><div className="container"><div className="section-head" id="catalog"><span className="eyebrow">Знайдіть свій</span><h2>Каталог диванів</h2><p>Перегляньте моделі та зателефонуйте, щоб уточнити розміри й варіанти тканин.</p></div>
         {loadError && <p className="catalog-message">Не вдалося завантажити каталог із бази. {loadError}</p>}
         {!loadError && <><div className="catalog-toolbar"><div className="category-filters" role="group" aria-label="Фільтр за категорією"><button type="button" className={selectedCategory === 'all' ? 'active' : ''} onClick={() => { setSelectedCategory('all'); setPage(1) }}>Усі товари</button>{categories.map(category => <button type="button" key={category.id} className={selectedCategory === category.id ? 'active' : ''} onClick={() => { setSelectedCategory(category.id); setPage(1) }}>{category.name}</button>)}</div><div className="catalog-sort"><span>Сортування</span><div className="sort-dropdown" ref={sortMenuRef}><button type="button" className="sort-trigger" aria-haspopup="menu" aria-expanded={sortMenuOpen} onClick={() => setSortMenuOpen(open => !open)}><span>{sortOrder === 'newest' ? 'Спочатку нові' : 'Ціна: від високої до низької'}</span><svg className={sortMenuOpen ? 'open' : ''} viewBox="0 0 16 16" aria-hidden="true"><path d="m3 6 5 5 5-5"/></svg></button>{sortMenuOpen && <div className="sort-menu" role="menu"><button type="button" role="menuitemradio" aria-checked={sortOrder === 'newest'} onClick={() => { setSortOrder('newest'); setPage(1); setSortMenuOpen(false) }}>Спочатку нові</button><button type="button" role="menuitemradio" aria-checked={sortOrder === 'price-desc'} onClick={() => { setSortOrder('price-desc'); setPage(1); setSortMenuOpen(false) }}>Ціна: від високої до низької</button></div>}</div></div></div>
-          {visibleProducts.length ? <><p className="catalog-count">Товарів: {filteredProducts.length}</p><div className="product-grid">{visibleProducts.map(product => <ProductCard key={product.id} product={product} categoryName={categories.find(category => category.id === product.category_id)?.name}/>)}</div>{pageCount > 1 && <nav className="pagination" aria-label="Сторінки каталогу"><button type="button" disabled={page === 1} onClick={() => setPage(current => current - 1)}>← Попередня</button><span>Сторінка {page} з {pageCount}</span><button type="button" disabled={page === pageCount} onClick={() => setPage(current => current + 1)}>Наступна →</button></nav>}</> : <p className="catalog-message">У цій категорії товарів поки немає.</p>}</>}
+          {visibleProducts.length ? <><p className="catalog-count">Товарів: {filteredProducts.length}</p><div className="product-grid">{visibleProducts.map(product => <ProductCard key={product.id} product={product} categoryName={categories.find(category => category.id === product.category_id)?.name} category={selectedCategory} sort={sortOrder} page={page}/>)}</div>{pageCount > 1 && <nav className="pagination" aria-label="Сторінки каталогу"><button type="button" disabled={page === 1} onClick={() => goToPage(page - 1)}>← Попередня</button><span>Сторінка {page} з {pageCount}</span><button type="button" disabled={page === pageCount} onClick={() => goToPage(page + 1)}>Наступна →</button></nav>}</> : <p className="catalog-message">У цій категорії товарів поки немає.</p>}</>}
       </div></section>
       <section className="section section-alt"><div className="container"><div className="highlight-card" id="about"><div><div className="highlight-icon" aria-hidden>🛠</div><span className="eyebrow">Напряму від виробника</span><h3>Продумано для щоденного комфорту</h3><p>Виготовляємо меблі з увагою до деталей. Допоможемо обрати матеріали та конфігурацію, а готове замовлення доставимо по Україні.</p></div><div className="features-grid">{features.map(text => <article className="feature-card" key={text}><span aria-hidden>✓</span><p>{text}</p></article>)}</div></div></div></section>
       <section className="contact-band"><div className="container contact-inner"><div><span className="eyebrow">Є питання?</span><h2>Допоможемо обрати ваш диван</h2></div><a className="btn btn-primary" href={`tel:${phone}`}>Зателефонувати · {phoneLabel}</a></div></section>
