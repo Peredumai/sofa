@@ -25,6 +25,8 @@ const anonKey = import.meta.env.VITE_SUPABASE_ANON_KEY
 const configured = Boolean(apiUrl && anonKey)
 const phone = '+380991036666'
 const phoneLabel = '+38 (099) 103-66-66'
+const telegramUrl = 'https://t.me/Wlsmebel'
+const viberUrl = 'viber://chat?number=%2B380980808062'
 
 const features = ['Меблі від виробника', 'Виготовлення за індивідуальними розмірами', 'Будь-який колір металу та тканини на вибір', 'Надійне порошкове фарбування металу', 'Знімні подушки для зручного догляду', 'Доставка по всій Україні']
 
@@ -55,6 +57,10 @@ async function getProducts(): Promise<Product[]> {
 async function getCategories(): Promise<Category[]> {
   return request<Category[]>('/rest/v1/categories?select=*&order=name.asc')
 }
+async function getProduct(id: string): Promise<Product | null> {
+  const rows = await request<Product[]>(`/rest/v1/products?select=*&id=eq.${encodeURIComponent(id)}&published=eq.true`)
+  return rows[0] || null
+}
 
 function money(value: number) { return `${new Intl.NumberFormat('uk-UA').format(value)} ₴` }
 function discountPercent(product: Product) {
@@ -66,6 +72,17 @@ function getStorageObjectPath(publicUrl: string) {
   const marker = '/storage/v1/object/public/sofas/'
   const index = publicUrl.indexOf(marker)
   return index < 0 ? null : decodeURIComponent(publicUrl.slice(index + marker.length))
+}
+
+function HeaderContacts() {
+  return <div className="header-contact-links" aria-label="Написати продавцю">
+    <a className="header-contact telegram-contact" href={telegramUrl} aria-label="Написати в Telegram" title="Telegram">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20.7 4.4 17.6 19c-.2 1-1 1.2-1.8.7l-4.9-3.6-2.4 2.3c-.3.3-.5.5-1 .5l.4-5 9.1-8.2c.4-.4-.1-.6-.6-.3L5.2 13 0.4 11.5c-1-.3-1-1 .2-1.5L19.3 2.8c.9-.3 1.7.2 1.4 1.6Z"/></svg>
+    </a>
+    <a className="header-contact viber-contact" href={viberUrl} aria-label="Написати у Viber" title="Viber">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19.1 4.1A10.2 10.2 0 0 0 12 1.3C6.1 1.3 1.4 5.8 1.4 11.4c0 1.8.5 3.6 1.5 5.1l-1 5.9 6-1.5c1.3.7 2.7 1 4.2 1 5.8 0 10.5-4.6 10.5-10.2 0-2.9-1.3-5.6-3.5-7.6ZM12 20a8.7 8.7 0 0 1-3.8-.9l-.3-.2-3.5.9.6-3.4-.2-.3a8.4 8.4 0 0 1-1.3-4.6A8.5 8.5 0 0 1 12 3.2a8.5 8.5 0 0 1 8.7 8.3A8.5 8.5 0 0 1 12 20Zm4.8-6.2c-.3-.1-1.5-.7-1.8-.8-.2-.1-.4-.1-.6.2-.2.3-.7.8-.9 1-.2.2-.3.2-.6.1-.3-.1-1.1-.4-2.1-1.3-.8-.7-1.3-1.5-1.5-1.8-.2-.3 0-.4.1-.6l.4-.4.3-.5c.1-.2 0-.4 0-.5l-.8-1.9c-.2-.5-.4-.4-.6-.4h-.5c-.2 0-.5.1-.7.4-.2.2-.9.9-.9 2.1s.9 2.4 1 2.6c.1.2 1.8 2.7 4.4 3.7.6.2 1.1.4 1.4.5.6.2 1.2.2 1.6.1.5-.1 1.5-.6 1.7-1.2.2-.6.2-1.1.2-1.2-.1-.1-.3-.2-.6-.3Z"/></svg>
+    </a>
+  </div>
 }
 
 function ProductCard({ product, categoryName }: { product: Product; categoryName?: string }) {
@@ -108,10 +125,10 @@ function ProductCard({ product, categoryName }: { product: Product; categoryName
     </button>
     <div className="product-info">
       {categoryName && <span className="product-category-tag">{categoryName}</span>}
-      <h3>{product.is_promo && <span className="promo-fire" aria-label="Акція">🔥 </span>}{product.name}</h3>
+      <a className="product-title-link" href={`/product/${product.id}`}><h3>{product.is_promo && <span className="promo-fire" aria-label="Акція">🔥 </span>}{product.name}</h3></a>
       <p>{product.description}</p>
       <div className="product-price"><strong>{money(product.price)}</strong>{product.is_promo && product.old_price && <del>{money(product.old_price)}</del>}</div>
-      
+      <a className="btn btn-primary product-details-link" href={`/product/${product.id}`}>Детальніше про диван</a>
     </div>
     {galleryOpen && <div className="lightbox" role="dialog" aria-modal="true" aria-label={`Фотографії: ${product.name}`} onClick={close}>
       <button type="button" className="lightbox-close" onClick={close} aria-label="Закрити">×</button>
@@ -258,6 +275,68 @@ function Admin() {
   </main>
 }
 
+function ProductDetail({ productId }: { productId: string }) {
+  const [product, setProduct] = useState<Product | null>(null)
+  const [categoryName, setCategoryName] = useState('')
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
+  const [imageIndex, setImageIndex] = useState(0)
+  const [lightboxOpen, setLightboxOpen] = useState(false)
+  const touchStartX = useRef<number | null>(null)
+
+  useEffect(() => {
+    let active = true
+    setLoading(true); setError('')
+    Promise.all([getProduct(productId), getCategories()]).then(([row, categories]) => {
+      if (!active) return
+      setProduct(row)
+      setCategoryName(categories.find(category => category.id === row?.category_id)?.name || '')
+      setImageIndex(0)
+      if (row) document.title = `${row.name} | Диван від виробника`
+      setLoading(false)
+    }).catch((err: Error) => { if (active) { setError(err.message); setLoading(false) } })
+    return () => { active = false }
+  }, [productId])
+
+  const photos = product?.images.length ? product.images : ['/images/placeholder.svg']
+  const previousPhoto = () => setImageIndex(index => (index - 1 + photos.length) % photos.length)
+  const nextPhoto = () => setImageIndex(index => (index + 1) % photos.length)
+  const onTouchStart = (event: TouchEvent<HTMLDivElement>) => { touchStartX.current = event.changedTouches[0]?.clientX ?? null }
+  const onTouchEnd = (event: TouchEvent<HTMLDivElement>) => {
+    if (touchStartX.current === null) return
+    const delta = event.changedTouches[0].clientX - touchStartX.current
+    touchStartX.current = null
+    if (Math.abs(delta) >= 45 && photos.length > 1) delta < 0 ? nextPhoto() : previousPhoto()
+  }
+  useEffect(() => {
+    if (!lightboxOpen) return
+    const oldBodyOverflow = document.body.style.overflow
+    const oldRootOverflow = document.documentElement.style.overflow
+    document.body.style.overflow = 'hidden'
+    document.documentElement.style.overflow = 'hidden'
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setLightboxOpen(false)
+      if (event.key === 'ArrowLeft') previousPhoto()
+      if (event.key === 'ArrowRight') nextPhoto()
+    }
+    window.addEventListener('keydown', onKey)
+    return () => {
+      document.body.style.overflow = oldBodyOverflow
+      document.documentElement.style.overflow = oldRootOverflow
+      window.removeEventListener('keydown', onKey)
+    }
+  }, [lightboxOpen, photos.length])
+
+  if (loading) return <main className="detail-message"><p>Завантажуємо товар…</p></main>
+  if (!product) return <main className="detail-message"><h1>Товар не знайдено</h1><p>{error || 'Можливо, його зняли з продажу або посилання застаріло.'}</p><a className="btn btn-primary" href="/#catalog">Повернутися до каталогу</a></main>
+
+  return <div className="landing product-detail-page"><header className="site-header"><div className="container header-inner"><a href="/" className="logo"><span className="logo-mark">Диван</span><span className="logo-sub">від виробника</span></a><nav className="main-nav"><a href="/#catalog">Каталог</a><a href="/#about">Про нас</a></nav><HeaderContacts/><a className="header-cta" href={`tel:${phone}`}>Зателефонувати</a></div></header>
+    <main className="container detail-main"><a className="detail-back" href="/#catalog">← До каталогу</a><div className="detail-layout"><div className="detail-gallery-column"><button type="button" className="detail-main-photo" onClick={() => setLightboxOpen(true)} aria-label="Відкрити фото на весь екран"><img src={photos[imageIndex]} alt={`${product.name} — фото ${imageIndex + 1}`}/><span>Збільшити фото ⤢</span></button>{photos.length > 1 && <div className="detail-thumbnails">{photos.map((photo, index) => <button type="button" key={`${photo}-${index}`} className={index === imageIndex ? 'active' : ''} onClick={() => setImageIndex(index)} aria-label={`Фото ${index + 1}`}><img src={photo} alt=""/></button>)}</div>}</div>
+      <article className="detail-copy">{categoryName && <span className="product-category-tag">{categoryName}</span>}{product.is_promo && <span className="detail-promo">🔥 Акційна пропозиція{discountPercent(product) ? ` · −${discountPercent(product)}%` : ''}</span>}<h1>{product.name}</h1><div className="detail-prices"><strong>{money(product.price)}</strong>{product.is_promo && product.old_price && <del>{money(product.old_price)}</del>}</div><h2>Опис</h2><p className="detail-description">{product.description || 'Зв’яжіться з нами, щоб дізнатися більше про цю модель.'}</p><div className="detail-actions"><a className="btn btn-primary" href={`tel:${phone}`}>Зателефонувати · {phoneLabel}</a><a className="btn btn-ghost" href={telegramUrl}>Написати в Telegram</a><a className="btn btn-ghost" href={viberUrl}>Написати у Viber</a></div><p className="detail-delivery">Доставка по Україні · Допоможемо підібрати тканину й розмір</p></article></div></main>
+    {lightboxOpen && <div className="lightbox" role="dialog" aria-modal="true" aria-label={`Фотогалерея: ${product.name}`} onClick={() => setLightboxOpen(false)}><button type="button" className="lightbox-close" onClick={() => setLightboxOpen(false)} aria-label="Закрити">×</button><p className="lightbox-counter">{product.name} · {imageIndex + 1} / {photos.length}</p>{photos.length > 1 && <button type="button" className="lightbox-nav lightbox-prev" onClick={event => { event.stopPropagation(); previousPhoto() }} aria-label="Попереднє фото">‹</button>}<div className="lightbox-stage" onClick={event => event.stopPropagation()} onTouchStart={onTouchStart} onTouchEnd={onTouchEnd}><img className="lightbox-img" src={photos[imageIndex]} alt={`${product.name} — фото ${imageIndex + 1}`}/></div>{photos.length > 1 && <button type="button" className="lightbox-nav lightbox-next" onClick={event => { event.stopPropagation(); nextPhoto() }} aria-label="Наступне фото">›</button>}</div>}
+  </div>
+}
+
 function Storefront() {
   const [products, setProducts] = useState<Product[]>([])
   const [categories, setCategories] = useState<Category[]>([])
@@ -304,7 +383,7 @@ function Storefront() {
     const timer = window.setInterval(() => setSlideIndex(i => (i + 1) % slides.length), 5000)
     return () => window.clearInterval(timer)
   }, [slides.length, carouselPaused])
-  return <div className="landing" id="top"><header className="site-header"><div className="container header-inner"><a href="#top" className="logo"><span className="logo-mark">Диван</span><span className="logo-sub">від виробника</span></a><nav className="main-nav"><a href="#catalog">Каталог</a><a href="#about">Про нас</a></nav><a className="header-cta" href={`tel:${phone}`}>Зателефонувати</a></div></header>
+  return <div className="landing" id="top"><header className="site-header"><div className="container header-inner"><a href="#top" className="logo"><span className="logo-mark">Диван</span><span className="logo-sub">від виробника</span></a><nav className="main-nav"><a href="#catalog">Каталог</a><a href="#about">Про нас</a></nav><HeaderContacts/><a className="header-cta" href={`tel:${phone}`}>Зателефонувати</a></div></header>
     <main><section className="hero"><div className="container hero-grid"><div className="hero-copy"><span className="eyebrow">Меблі для вашого простору</span><h1 className="hero-title">Затишок, який створений для вас</h1><p className="hero-lead">Виготовляємо стильні дивани та меблі від виробника. Підберемо розмір, тканину й колір під ваш простір.</p><div className="hero-actions"><a className="btn btn-primary" href="#catalog">Переглянути каталог</a><a className="btn btn-ghost" href={`tel:${phone}`}>{phoneLabel}</a></div><div className="hero-note">Доставка по всій Україні · Власне виробництво</div></div><div className="hero-gallery"><div className="gallery hero-carousel" onMouseEnter={() => setCarouselPaused(true)} onMouseLeave={() => setCarouselPaused(false)}><img key={currentSlide.src} className="gallery-main hero-slide-image" src={currentSlide.src} alt={currentSlide.label}/><span className="hero-photo-label">{currentSlide.label}</span>{slides.length > 1 && <><button type="button" className="carousel-arrow carousel-prev" aria-label="Попереднє фото" onClick={() => setSlideIndex(i => (i - 1 + slides.length) % slides.length)}>‹</button><button type="button" className="carousel-arrow carousel-next" aria-label="Наступне фото" onClick={() => setSlideIndex(i => (i + 1) % slides.length)}>›</button><div className="carousel-dots">{slides.map((slide, i) => <button key={`${slide.src}-${i}`} type="button" className={i === slideIndex ? 'active' : ''} aria-label={`Показати ${slide.label}`} onClick={() => setSlideIndex(i)}/>)}</div></>}</div></div></div></section>
       <section className="section catalog-section"><div className="container"><div className="section-head" id="catalog"><span className="eyebrow">Знайдіть свій</span><h2>Каталог диванів</h2><p>Перегляньте моделі та зателефонуйте, щоб уточнити розміри й варіанти тканин.</p></div>
         {loadError && <p className="catalog-message">Не вдалося завантажити каталог із бази. {loadError}</p>}
@@ -317,9 +396,12 @@ function Storefront() {
 }
 
 function App() {
-  const [adminRoute, setAdminRoute] = useState(window.location.pathname === '/admin')
-  useEffect(() => { const update = () => setAdminRoute(window.location.pathname === '/admin'); window.addEventListener('popstate', update); return () => window.removeEventListener('popstate', update) }, [])
-  return adminRoute ? <Admin/> : <Storefront/>
+  const [pathname, setPathname] = useState(window.location.pathname)
+  useEffect(() => { const update = () => setPathname(window.location.pathname); window.addEventListener('popstate', update); return () => window.removeEventListener('popstate', update) }, [])
+  if (pathname === '/admin') return <Admin/>
+  const productRoute = pathname.match(/^\/product\/([^/]+)\/?$/)
+  if (productRoute) return <ProductDetail productId={decodeURIComponent(productRoute[1])}/>
+  return <Storefront/>
 }
 
 export default App

@@ -94,6 +94,12 @@
   background: #1f2d27;
   transform: translateY(-1px);
 }
+.header-contact-links { display: flex; align-items: center; gap: .45rem; margin-left: .5rem; }
+.header-contact { display: grid; place-items: center; width: 34px; height: 34px; border-radius: 50%; color: #fff; transition: transform .16s, box-shadow .16s; }
+.header-contact:hover { transform: translateY(-2px); box-shadow: 0 5px 12px rgba(0,0,0,.16); }
+.header-contact svg { width: 17px; height: 17px; fill: currentColor; }
+.telegram-contact { background: #229ed9; }
+.viber-contact { background: #7360f2; }
 
 /* Hero */
 .hero {
@@ -740,6 +746,9 @@
 .sale-tag { position: absolute; top: 1rem; left: 1rem; border-radius: 999px; background: var(--forest); color: white; padding: .45rem .75rem; font-size: .75rem; }
 .product-info { padding: 1.25rem; }
 .product-info h3 { font-size: 1.6rem; }
+.product-title-link { display: inline-block; color: inherit; text-decoration: none; }
+.product-title-link:hover { color: var(--clay-dark); }
+.product-details-link { width: 100%; margin-top: .25rem; }
 .promo-fire { font-family: system-ui,sans-serif; font-size: .78em; }
 .product-category-tag { display: inline-flex; margin-bottom: .35rem; padding: .28rem .65rem; border-radius: 999px; background: rgba(44,62,54,.08); color: var(--muted); font-size: .72rem; font-weight: 700; }
 .product-info > p { min-height: 3.7em; color: var(--muted); font-size: .9rem; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
@@ -835,8 +844,33 @@
 .pagination button { padding: .65rem .9rem; border: 1px solid rgba(44,62,54,.15); border-radius: 999px; background: var(--white); color: var(--forest); cursor: pointer; }
 .pagination button:disabled { opacity: .42; cursor: default; }
 .pagination span { color: var(--muted); font-size: .85rem; }
+.detail-main { padding-top: 2.5rem; padding-bottom: 5rem; }
+.detail-back { display: inline-flex; margin-bottom: 1.25rem; color: var(--muted); text-decoration: none; font-size: .9rem; }
+.detail-back:hover { color: var(--clay-dark); }
+.detail-layout { display: grid; grid-template-columns: minmax(0,1.1fr) minmax(320px,.9fr); gap: clamp(2rem,5vw,4.5rem); align-items: start; }
+.detail-gallery-column { min-width: 0; }
+.detail-main-photo { position: relative; display: block; width: 100%; padding: 0; overflow: hidden; border: 0; border-radius: 22px; background: var(--sand); aspect-ratio: 4/3; cursor: zoom-in; box-shadow: var(--shadow); }
+.detail-main-photo img { display: block; width: 100%; height: 100%; object-fit: cover; }
+.detail-main-photo > span { position: absolute; right: 1rem; bottom: 1rem; padding: .45rem .75rem; border-radius: 999px; background: rgba(255,252,248,.9); color: var(--forest); font-size: .78rem; }
+.detail-thumbnails { display: flex; gap: .6rem; margin-top: .75rem; overflow-x: auto; padding-bottom: .3rem; }
+.detail-thumbnails button { flex: 0 0 82px; width: 82px; height: 64px; padding: 0; overflow: hidden; border: 2px solid transparent; border-radius: 10px; background: var(--sand); opacity: .75; cursor: pointer; }
+.detail-thumbnails button.active { border-color: var(--clay); opacity: 1; }
+.detail-thumbnails img { width: 100%; height: 100%; object-fit: cover; }
+.detail-copy { padding: clamp(1.25rem,3vw,2.25rem); border: 1px solid rgba(44,62,54,.08); border-radius: 22px; background: var(--white); box-shadow: 0 18px 48px rgba(44,62,54,.08); }
+.detail-copy h1 { margin: .7rem 0 .5rem; font-size: clamp(2.35rem,4vw,3.4rem); }
+.detail-promo { display: block; margin-top: .7rem; color: #a95032; font-size: .9rem; font-weight: 700; }
+.detail-prices { display: flex; align-items: baseline; gap: .8rem; margin: .5rem 0 1.5rem; }
+.detail-prices strong { color: var(--clay-dark); font: 700 clamp(2rem,4vw,2.7rem)/1 'Cormorant Garamond',Georgia,serif; }
+.detail-prices del { color: var(--muted); font-size: 1rem; }
+.detail-copy h2 { margin: 1.4rem 0 .45rem; font-size: 1.45rem; }
+.detail-description { margin: 0; color: var(--muted); white-space: pre-line; line-height: 1.75; }
+.detail-actions { display: grid; gap: .65rem; margin-top: 1.5rem; }
+.detail-actions .btn { width: 100%; }
+.detail-delivery { margin: 1rem 0 0; color: var(--muted); font-size: .8rem; text-align: center; }
+.detail-message { display: grid; min-height: 70vh; place-content: center; justify-items: center; gap: 1rem; padding: 2rem; text-align: center; color: #2c3e36; }
+.detail-message h1, .detail-message p { margin: 0; }
 @media(max-width:900px) { .product-grid { grid-template-columns: repeat(2,minmax(0,1fr)); } .admin-layout { grid-template-columns: 1fr; } .product-editor { position: static; } }
-@media(max-width:600px) { .main-nav { gap: .75rem; margin: 0; } .main-nav a { font-size: .8rem; } .header-cta { padding: .6rem .85rem; font-size: .78rem; } .header-inner { gap: .6rem; } .logo-mark { font-size: 1.45rem; } .logo-sub { font-size: .58rem; } .product-grid { grid-template-columns: 1fr; } .contact-inner, .footer-inner { align-items: flex-start; flex-direction: column; } .admin-row { flex-wrap: wrap; } .admin-row-copy { flex-basis: calc(100% - 90px); } .admin-row button { margin-left: 3.8rem; } .admin-login { padding: 1.5rem; } .catalog-toolbar { align-items: stretch; flex-direction: column; gap: .5rem; } .catalog-sort { justify-content: space-between; } .sort-dropdown { flex: 1; } .sort-trigger { width: 100%; min-width: 0; max-width: none; } .sort-menu { width: 100%; } .pagination { gap: .55rem; } .pagination button { padding: .6rem .7rem; font-size: .78rem; } .pagination span { font-size: .76rem; white-space: nowrap; } }
+@media(max-width:600px) { .landing { --header-height: 6rem; padding-top: var(--header-height); } .header-inner { display: grid; grid-template-columns: minmax(0,1fr) auto auto; grid-template-rows: auto auto; gap: .4rem .55rem; padding: .45rem 0 .55rem; } .header-inner > .logo { grid-column: 1; grid-row: 1; } .main-nav { grid-column: 1 / -1; grid-row: 2; justify-content: center; gap: 1.1rem; margin: 0; } .main-nav a { font-size: .8rem; } .header-contact-links { grid-column: 2; grid-row: 1; gap: .3rem; margin: 0; } .header-contact { width: 30px; height: 30px; } .header-contact svg { width: 15px; height: 15px; } .header-cta { grid-column: 3; grid-row: 1; padding: .55rem .7rem; font-size: .72rem; white-space: nowrap; } .logo-mark { font-size: 1.45rem; } .logo-sub { font-size: .58rem; } .product-grid { grid-template-columns: 1fr; } .contact-inner, .footer-inner { align-items: flex-start; flex-direction: column; } .admin-row { flex-wrap: wrap; } .admin-row-copy { flex-basis: calc(100% - 90px); } .admin-row button { margin-left: 3.8rem; } .admin-login { padding: 1.5rem; } .catalog-toolbar { align-items: stretch; flex-direction: column; gap: .5rem; } .catalog-sort { justify-content: space-between; } .sort-dropdown { flex: 1; } .sort-trigger { width: 100%; min-width: 0; max-width: none; } .sort-menu { width: 100%; } .pagination { gap: .55rem; } .pagination button { padding: .6rem .7rem; font-size: .78rem; } .pagination span { font-size: .76rem; white-space: nowrap; } .detail-main { padding-top: 1.5rem; padding-bottom: 3rem; } .detail-layout { grid-template-columns: minmax(0,1fr); gap: 1.25rem; } .detail-copy { padding: 1.25rem; } }
 
 .lightbox-prev {
   grid-column: 1;
